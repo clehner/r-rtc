@@ -8,13 +8,14 @@ var rtcConfig = {
 	]
 };
 var constraints = {
-    mandatory: {
-        OfferToReceiveAudio: false,
-        OfferToReceiveVideo: false,
-    },
-    optional: [{
-        googIPv6: true
-    }]
+	mandatory: {
+		OfferToReceiveAudio: false,
+		OfferToReceiveVideo: false,
+	},
+	optional: [
+		//{googIPv6: true},
+		//{DtlsSrtpKeyAgreement: true}
+	]
 };
 
 var expiration = 15 * 60 * 1000;
@@ -268,7 +269,7 @@ S.gotMessage = function(type, data) {
 		this.ensurePeerConnection();
 		//console.debug('got ice', data);
 		try {
-			this.pc.addIceCandidate(new webrtc.IceCandidate({candidate: data}));
+			this.pc.addIceCandidate(new webrtc.IceCandidate(data));
 		} catch(e) {
 			console.error('Error adding ICE candidate: ' + e.message, data);
 		}
