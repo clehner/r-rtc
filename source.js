@@ -92,7 +92,6 @@ S.history = function(sources, updates) {
 S.applyUpdate = function(update) {
 	// [value, timestamp, source_id, (signature)] = update
 	var value = update[0];
-	var timestamp = update[1];
 	if (value == null) {
 		// invalid update
 		return false;
@@ -108,7 +107,7 @@ S.applyUpdate = function(update) {
 		}
 		this.state = update;
 		if (this.id != this.rrtc.id) {
-			this.gotState(value[0], timestamp);
+			this.gotState(value[0]);
 		}
 
 	} else if (value.length == 2) {
@@ -148,7 +147,7 @@ S.applyUpdate = function(update) {
 };
 
 S.localUpdate = function(data) {
-	console.log('sending local', this.id, data);
+	console.log('sending local', this.id, data[0], data[1]);
 	this.rrtc.localUpdate([this.id].concat(data));
 };
 
@@ -185,7 +184,6 @@ function Source_onLocalDescCreated(desc) {
 
 function Source_onSetLocalDescription() {
 	console.log('local description set');
-	this.rrtc.getSource(this);
 	this.localUpdate([this.pc.localDescription]);
 	/*
 	if (this.signalingState == 'stable') {
@@ -194,8 +192,8 @@ function Source_onSetLocalDescription() {
 	*/
 }
 
-S.gotState = function(state, timestamp) {
-	this.rrtc._gotState(this, state, timestamp);
+S.gotState = function(state) {
+	this.rrtc._gotState(this, state);
 };
 
 // we changed our description
@@ -237,7 +235,6 @@ S.ensurePeerConnection = function() {
 	this.pc.oniceconnectionstatechange = function() {
 		console.debug('ice connection state', this.iceConnectionState, this.iceGatheringState);
 	};
-	this.startNegotiation();
 };
 
 S.startNegotiation = function() {
@@ -252,6 +249,19 @@ S.gotRemoteDescription = function(desc) {
 	}
 
 	this.ensurePeerConnection();
+
+	if (desc === true) {
+		// Special description 'true' means that they want to connect to us.
+		// Connect if this state is newer than our state
+		var myTimestamp = this.descriptions[this.rrtc.id][1];
+		var theirTimestamp = this.rrtc.getMySource().descriptions[this.id][1];
+		if (theirTimestamp > myTimestamp) {
+			console.log('starting negotiation', this.id);
+			this.startNegotiation();
+		} else {
+			console.log('not starting negotiation');
+		}
+	}
 
 	if (!desc || typeof desc != 'object') return;
 

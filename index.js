@@ -55,21 +55,17 @@ R._gotPeerConnection = function(source) {
 	this.emit('peerconnection', source.id, source.pc);
 };
 
-R._gotState = function(source, state, timestamp) {
-	var mySource = this.getSource(this.id);
-	var myTimestamp = mySource.state[1];
-	console.log(timestamp, myTimestamp, timestamp > myTimestamp);
-	if (timestamp > myTimestamp) {
-		// Only emit peer states sent after our peer state. The peer who set the
-		// older state is responsible for initiating the connection.
-		this.emit('peerstate', source.id, state);
-	}
+R._gotState = function(source, state) {
+	this.emit('peerstate', source.id, state);
 };
 
 // do we want to connect to the given source
 R.shouldConnect = function(source) {
-	var mySource = this.getSource(this.id);
-	return mySource.descriptions[source.id];
+	return this.getMySource().descriptions[source.id];
+};
+
+R.getMySource = function() {
+	return this.getSource(this.id);
 };
 
 R.toJSON = function() {
