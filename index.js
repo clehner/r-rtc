@@ -28,7 +28,6 @@ R.history = function(sources) {
 };
 
 R.applyUpdate = function(update) {
-	console.log('applying update', JSON.stringify(update));
 	// [value, timestamp, source_id, (signature)] = update
 	//var timestamp = update[1];
 	var source = this.getSource(update[2]);
