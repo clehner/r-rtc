@@ -92,6 +92,7 @@ S.history = function(sources, updates) {
 S.applyUpdate = function(update) {
 	// [value, timestamp, source_id, (signature)] = update
 	var value = update[0];
+	var timestamp = update[1];
 	if (value == null) {
 		// invalid update
 		return false;
@@ -107,7 +108,7 @@ S.applyUpdate = function(update) {
 		}
 		this.state = update;
 		if (this.id != this.rrtc.id) {
-			this.gotState(value[0]);
+			this.gotState(value[0], timestamp);
 		}
 
 	} else if (value.length == 2) {
@@ -193,8 +194,8 @@ function Source_onSetLocalDescription() {
 	*/
 }
 
-S.gotState = function(state) {
-	this.rrtc._gotState(this, state);
+S.gotState = function(state, timestamp) {
+	this.rrtc._gotState(this, state, timestamp);
 };
 
 // we changed our description
