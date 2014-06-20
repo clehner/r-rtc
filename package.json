@@ -1,10 +1,13 @@
 {
   "name": "r-rtc",
   "version": "0.0.1",
-  "description": "WebRTC signalling through scuttlebutt",
+  "description": "Distributed WebRTC signalling",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "url": "git://github.com/clehner/r-rtc.git"
   },
   "keywords": [
     "webrtc",
