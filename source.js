@@ -92,6 +92,7 @@ S.history = function(sources, updates) {
 S.applyUpdate = function(update) {
 	// [value, timestamp, source_id, (signature)] = update
 	var value = update[0];
+	var timestamp = update[1];
 	if (value == null) {
 		// invalid update
 		return false;
@@ -118,25 +119,28 @@ S.applyUpdate = function(update) {
 			console.log('desc too old');
 			return false;
 		}
-		this.descriptions[peerId] = update;
 		// console.log('peerId', peerId, 'rtc id', this.rrtc.id, 'this id', this.id);
-		if (peerId == this.rrtc.id) {
+		if (peerId == this.rrtc.id && this.rrtc.shouldConnect(this)) {
 			console.log('got remote', value[1], this.id, this.rrtc.id, peerId);
-			this.gotRemoteDescription(value[1]);
-		} else if (this.id == this.rrtc.id) {
-			//console.log('got local', value[1], this.id, peerId);
-			var peer = this.rrtc.getSource(peerId);
-			peer.gotLocalDescription(value[1]);
+			this.gotRemoteDescription(value[1], timestamp);
+
 		} else {
-			//console.log('some desc', value[1], this.id, this.rrtc.id, peerId);
+			this.descriptions[peerId] = update;
+			if (this.id == this.rrtc.id) {
+				//console.log('got local', value[1], this.id, peerId);
+				var peer = this.rrtc.getSource(peerId);
+				peer.gotLocalDescription(value[1], timestamp);
+				//console.log('some desc', value[1], this.id, this.rrtc.id, peerId);
+			}
 		}
 
 	} else if (value.length == 3) {
 		// relay message
 		var messages = this.messages[peerId] || (this.messages[peerId] = []);
-		messages.push(update);
-		if (peerId == this.rrtc.id) {
+		if (peerId == this.rrtc.id && this.rrtc.shouldConnect(this)) {
 			this.gotMessage(value[1], value[2]);
+		} else {
+			messages.push(update);
 		}
 
 	} else {
@@ -172,6 +176,8 @@ function Source_onSetRemoteDescription() {
 	if (this.pc.remoteDescription.type == 'offer') {
 		this.pc.createAnswer(Source_onLocalDescCreated.bind(this),
 			this.logError);
+	} else if (this.pc.signalingState == 'stable') {
+		this.rrtc._gotPeerConnection(this);
 	}
 }
 
@@ -185,11 +191,9 @@ function Source_onLocalDescCreated(desc) {
 function Source_onSetLocalDescription() {
 	console.log('local description set');
 	this.localUpdate([this.pc.localDescription]);
-	/*
-	if (this.signalingState == 'stable') {
-		this.rrtc._gotPeerConnection(this, this.pc);
+	if (this.pc.signalingState == 'stable') {
+		this.rrtc._gotPeerConnection(this);
 	}
-	*/
 }
 
 S.gotState = function(state) {
@@ -197,7 +201,7 @@ S.gotState = function(state) {
 };
 
 // we changed our description
-S.gotLocalDescription = function(desc) {
+S.gotLocalDescription = function(desc, timestamp) {
 	if (!desc) return;
 	var peerId = this.rrtc.id;
 	var update, value;
@@ -207,12 +211,13 @@ S.gotLocalDescription = function(desc) {
 	update = this.descriptions[peerId];
 	if (update) {
 		value = update[0];
-		this.gotRemoteDescription(value[1]);
+		this.gotRemoteDescription(value[1], timestamp);
 	}
 
-	// release the messages
+	// release the messages to us
 	for (peerId in this.messages) {
 		var messages = this.messages[peerId];
+		delete this.messages[peerId];
 		for (var i = 0; i < messages.length; i++) {
 			update = messages[1];
 			if (update) {
@@ -242,20 +247,18 @@ S.startNegotiation = function() {
 };
 
 // we (rrtc) got a description from this remote peer
-S.gotRemoteDescription = function(desc) {
+S.gotRemoteDescription = function(desc, timestamp) {
 	if (!this.rrtc.shouldConnect(this)) {
 		// we don't care about this peer's connection attempt
-		return;
+		console.error("shouldn't connect here");
 	}
-
 	this.ensurePeerConnection();
 
 	if (desc === true) {
 		// Special description 'true' means that they want to connect to us.
 		// Connect if this state is newer than our state
-		var myTimestamp = this.descriptions[this.rrtc.id][1];
 		var theirTimestamp = this.rrtc.getMySource().descriptions[this.id][1];
-		if (theirTimestamp > myTimestamp) {
+		if (theirTimestamp > timestamp) {
 			console.log('starting negotiation', this.id);
 			this.startNegotiation();
 		} else {
@@ -265,17 +268,15 @@ S.gotRemoteDescription = function(desc) {
 
 	if (!desc || typeof desc != 'object') return;
 
+	// we are using this description, so it is no longer needed in the state
+	delete this.descriptions[this.rrtc.id];
+
 	console.debug('remote description setting', desc, this.signalingState);
 	this.pc.setRemoteDescription(new webrtc.SessionDescription(desc),
 		Source_onSetRemoteDescription.bind(this), this.logError);
 };
 
 S.gotMessage = function(type, data) {
-	if (!this.rrtc.shouldConnect(this)) {
-		// we don't care about this peer's connection attempt
-		return;
-	}
-
 	if (type == 'ice') {
 		this.ensurePeerConnection();
 		//console.debug('got ice', data);
