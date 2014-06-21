@@ -161,7 +161,7 @@ function Source_logError(e) {
 
 function Source_onIceCandidate(e) {
 	if (e.candidate) {
-		console.log('sending ice', e.candidate);
+		//console.log('sending ice', e.candidate);
 		this.localUpdate(['ice', e.candidate]);
 	}
 }
@@ -242,13 +242,13 @@ S.ensurePeerConnection = function() {
 	if (this.pc) return;
 	console.log('creating pc');
 	this.pc = new webrtc.PeerConnection(rtcConfig, constraints);
+	this.rrtc._gotPeerConnection(this);
 	this.pc.onnegotiationneeded = Source_onNegotiationNeeded.bind(this);
 	this.pc.onicecandidate = Source_onIceCandidate.bind(this);
 	this.pc.onsignalingstatechange = function() {
 		console.debug('signalling state', this.signalingState);
 	};
 	this.pc.oniceconnectionstatechange = Source_onIceStateChange.bind(this);
-	this.rrtc._gotPeerConnection(this);
 };
 
 S.startNegotiation = function() {
@@ -290,7 +290,7 @@ S.gotRemoteDescription = function(desc, timestamp) {
 S.gotMessage = function(type, data) {
 	if (type == 'ice') {
 		this.ensurePeerConnection();
-		console.log('got ice', data);
+		//console.log('got ice', data);
 		try {
 			this.pc.addIceCandidate(new webrtc.IceCandidate(data));
 		} catch(e) {

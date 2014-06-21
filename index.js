@@ -10,9 +10,14 @@ function RRTC(opts) {
 	if(!(this instanceof RRTC)) return new RRTC(opts);
 	Scuttlebutt.call(this, opts);
 	this._sources = {};
+
+	this._stateTimer = setInterval(this.updateState.bind(this),
+		this.stateUpdateInterval);
 }
 
 var R = RRTC.prototype;
+
+R.stateUpdateInterval = 10 * 60 * 1000;
 
 R.getSource = function(id) {
 	return this._sources[id] || (this._sources[id] = new Source(id, this));
@@ -39,8 +44,15 @@ R.applyUpdate = function(update) {
  * connect to us.
  */
 R.setState = function(state) {
-	this.localUpdate([state]);
-	// TODO: set timer
+	this.state = state;
+	this.updateState();
+};
+
+/*
+ * Remind peers that we are here.
+ */
+R.updateState = function() {
+	this.localUpdate([this.state]);
 };
 
 /*
