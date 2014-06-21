@@ -191,8 +191,6 @@ function Source_onSetRemoteDescription() {
 	if (this.pc.remoteDescription.type == 'offer') {
 		this.pc.createAnswer(Source_onLocalDescCreated.bind(this),
 			this.logError);
-	} else {
-		this.checkPeerConnection();
 	}
 }
 
@@ -206,15 +204,7 @@ function Source_onLocalDescCreated(desc) {
 function Source_onSetLocalDescription() {
 	console.log('local description set. sending', this.pc.localDescription);
 	this.localUpdate([this.pc.localDescription]);
-	this.checkPeerConnection();
 }
-
-S.checkPeerConnection = function() {
-	if (!this.emitted && this.pc.signalingState == 'stable') {
-		this.emitted = true;
-		this.rrtc._gotPeerConnection(this);
-	}
-};
 
 S.gotState = function(state) {
 	this.rrtc._gotState(this, state);
@@ -258,6 +248,7 @@ S.ensurePeerConnection = function() {
 		console.debug('signalling state', this.signalingState);
 	};
 	this.pc.oniceconnectionstatechange = Source_onIceStateChange.bind(this);
+	this.rrtc._gotPeerConnection(this);
 };
 
 S.startNegotiation = function() {

@@ -38,8 +38,8 @@ signalling.setState(true);
 
 ## Status
 
-Currently it works some of the time. There are issues when renegotiating a
-connection after adding a data channel.
+Currently it seems to work. There are sometimes issues when renegotiating a
+connection.
 
 For an example in use, see [rtc-cards](https://github.com/clehner/rtc-cards).
 
